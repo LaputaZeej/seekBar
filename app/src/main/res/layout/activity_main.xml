@@ -17,15 +17,17 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.laputa.seekbar.MySeekBar
-
         android:id="@+id/sb"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:sb_per_progress="10dp"
-        app:sb_max="1000"
-        app:sb_progress="35"
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:sb_max="1000"
+        app:sb_mode="avg"
+        app:sb_per_progress="10dp"
+        app:sb_progress="35"
+        app:sb_progress_color="#f98"
+        app:sb_progress_background_color="@color/colorAccent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

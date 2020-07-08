@@ -7,11 +7,13 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import androidx.core.content.res.getDimensionOrThrow
 import java.lang.IllegalStateException
 import kotlin.math.abs
 import kotlin.math.roundToLong
 
 class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
+
     /**
      * 进度
      */
@@ -56,6 +58,10 @@ class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     // 进度个数
     private var mSize = 20
 
+    private var progressColor: Int = 0
+    private var progressBackgroundColor: Int = 0
+    private var mode = MODE_TILE
+
     // 整数个进度的个数
     private var integerProgress: Int = 0
     private val rectF: RectF by lazy { RectF() }
@@ -76,7 +82,13 @@ class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
             progress = getInt(R.styleable.MySeekBar_sb_progress, 0).toFloat()
             perProgressWidth =
                 getDimension(R.styleable.MySeekBar_sb_per_progress, DEFAULT_PER_PROGRESS_WIDTH)
-            perSpaceWidth = perProgressWidth / 2
+            perSpaceWidth = perProgressWidth / 4
+
+            progressColor = getColor(R.styleable.MySeekBar_sb_progress_color, Color.BLACK)
+            progressBackgroundColor =
+                getColor(R.styleable.MySeekBar_sb_progress_background_color, Color.GRAY)
+            mode = getInt(R.styleable.MySeekBar_sb_mode, MODE_TILE)
+            logger("mode : $mode")
         }
         obtainStyledAttributes.recycle()
         isClickable = true
@@ -91,8 +103,36 @@ class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
         val strokeWidth = progressPaint.strokeWidth
-        val mWidth: Float =
-            perProgressWidth * mSize + perSpaceWidth * (mSize - 1) + strokeWidth * mSize * 2
+
+        val mWidth = when (mode) {
+            // 平分
+            MODE_AVG -> {
+                // TODO 平均分 算出perProgressWidth和perSpaceWidth
+                when (MeasureSpec.getMode(widthMeasureSpec)) {
+                    MeasureSpec.EXACTLY -> {
+                        val viewWidth = MeasureSpec.getSize(widthMeasureSpec)
+                        val per = viewWidth / mSize
+                        // perProgressWidth perSpaceWidth strokeWidth 三者所占比例需要自己调整
+                        perProgressWidth = per * 6 / 10f
+                        perSpaceWidth =
+                            (viewWidth - perProgressWidth * mSize - 2 * mSize * strokeWidth) / (mSize - 1)
+                        viewWidth.toFloat()
+                    }
+                    else -> {
+                        perProgressWidth * mSize + perSpaceWidth * (mSize - 1) + strokeWidth * mSize * 2
+                    }
+                }
+            }
+
+            // 平铺
+            MODE_TILE -> {
+                // 可能超出父控件的宽度导致无法显示完全。一般不这么设计SeekBar。
+                perProgressWidth * mSize + perSpaceWidth * (mSize - 1) + strokeWidth * mSize * 2
+
+            }
+            else -> perProgressWidth * mSize + perSpaceWidth * (mSize - 1) + strokeWidth * mSize * 2
+        }
+
         val mHeight: Float =
             when (MeasureSpec.getMode(heightMeasureSpec)) {
                 MeasureSpec.EXACTLY -> {
@@ -104,6 +144,7 @@ class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
                 }
             }
         setMeasuredDimension(mWidth.toInt(), mHeight.toInt())
+
     }
 
     override fun onDraw(canvas: Canvas) {
@@ -120,7 +161,7 @@ class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
             when {
                 index < integerProgress -> {
                     progressPaint.style = Paint.Style.FILL
-                    progressPaint.color = Color.parseColor("#ff9988")
+                    progressPaint.color = progressColor
                     // Paint.Style.FILL和 Paint.Style.STROKE有差别
                     // 实心的比空心的小
                     rLeft -= strokeWidth / 2
@@ -128,7 +169,7 @@ class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
                 }
                 index == integerProgress -> {
                     progressPaint.style = Paint.Style.STROKE
-                    progressPaint.color = Color.parseColor("#ff9988")
+                    progressPaint.color = progressColor
                     // Paint.Style.FILL和 Paint.Style.STROKE有差别
                     // 实心的比空心的小
                     rTop += strokeWidth / 2
@@ -140,7 +181,7 @@ class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
                     rTop += strokeWidth / 2
                     rBottom -= strokeWidth / 2
                     progressPaint.style = Paint.Style.STROKE
-                    progressPaint.color = Color.RED
+                    progressPaint.color = progressBackgroundColor
                 }
             }
             rectF.set(rLeft, rTop, rRight, rBottom)
@@ -153,22 +194,23 @@ class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private fun drawNonIntegerProgress(canvas: Canvas) {
         val strokeWidth = progressPaint.strokeWidth
         val realTotalWidth = realWidth()
+        // 判断是否满一格
         if (mSize * progress % max == 0f) {
             logger("整除")
             return
         }
+        // 计算不满一格的部分
         val nonInterProgress =
             realTotalWidth * progress / max - integerProgress * perProgressWidth
         logger("nonInterProgress = $nonInterProgress")
-
         val rLeft =
-            integerProgress * (perSpaceWidth + perProgressWidth) + integerProgress * 2 * strokeWidth + strokeWidth
+            integerProgress * (perSpaceWidth + perProgressWidth) + integerProgress * 2 * strokeWidth + strokeWidth / 2
         val rTop = strokeWidth / 2
         val rRight = rLeft + nonInterProgress
         val rBottom = height.toFloat() - strokeWidth / 2
         rectF.set(rLeft, rTop, rRight, rBottom)
         progressPaint.style = Paint.Style.FILL
-        progressPaint.color = Color.parseColor("#ff9988")
+        progressPaint.color = progressColor
         //canvas.drawRoundRect(rectF, ROUND, ROUND, progressPaint)
         val path = Path().apply {
             addRoundRect(rectF, ROUND, ROUND, Path.Direction.CW)
@@ -195,6 +237,10 @@ class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private fun onSelected() {
         logger("onSelected $progress")
         onProgressSelectedListener?.invoke(this, progress, max)
+
+        removeCallbacks(mRunnable)
+        post(mRunnable)
+
     }
 
     // 精度调节
@@ -288,9 +334,13 @@ class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
             if (!DEBUG) return
             Log.i(TAG, msg)
         }
+
+        const val MODE_AVG = 1
+        const val MODE_TILE = 2
     }
 }
 
 typealias OnProgressSelectedListener = (View, Float, Float) -> Unit
 
 typealias OnProgressChangedListener = (View, Float, Float) -> Unit
+

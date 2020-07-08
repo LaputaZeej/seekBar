@@ -195,8 +195,6 @@ class MySeekBar(context: Context, attrs: AttributeSet?) : View(context, attrs) {
     private fun onSelected() {
         logger("onSelected $progress")
         onProgressSelectedListener?.invoke(this, progress, max)
-        removeCallbacks(mRunnable)
-        post(mRunnable)
     }
 
     // 精度调节

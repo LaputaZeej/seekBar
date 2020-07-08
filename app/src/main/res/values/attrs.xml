@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="MySeekBar">
+        <attr name="sb_max" format="integer" />
+        <attr name="sb_progress" format="integer" />
+        <attr name="sb_per_progress" format="dimension" />
+    </declare-styleable>
+
+
+
+</resources>
